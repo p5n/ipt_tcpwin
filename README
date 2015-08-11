@@ -8,3 +8,9 @@ userspace.
 
 It is based on TTL module written by
 Harald Welte <laforge@netfilter.org>
+
+Usage example:
+
+- make modules and put them to proper places
+- modprobe xt_TCPWIN
+- iptables -t mangle -I OUTPUT -p tcp --sport 80 --tcp-flags SYN,ACK SYN,ACK -j TCPWIN --tcpwin-set 0
