@@ -1,0 +1,10 @@
+This is used to modify the IPv4 TCP window field.
+.PP
+Setting TCP window field can potentially be very dangerous,
+so it should be avoided at any cost. This target is only valid in
+.B mangle
+table.
+.PP
+.TP
+\fB\-\-tcpwin\-set\fP \fIvalue\fP
+Set the TCP window value to `value'.
