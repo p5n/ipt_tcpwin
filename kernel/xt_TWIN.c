@@ -1,6 +1,7 @@
 /*
  * TCP window modification target for IP tables
  * (C) 2015 by Sergej Pupykin <sergej@p5n.pp.ru>
+ * (C) 2017 fixes by Vadim Fedorenko <junjunk@fromru.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,22 +19,34 @@
 #include "ipt_TWIN.h"
 
 MODULE_AUTHOR("Harald Welte <laforge@netfilter.org>");
+MODULE_AUTHOR("Vadim Fedorenko <junjunk@fromru.com>");
 MODULE_DESCRIPTION("Xtables: TCPWIN field modification target");
 MODULE_LICENSE("GPL");
 
 static unsigned int
 twin_tg(struct sk_buff *skb, const struct xt_action_param *par)
 {
-	struct tcphdr *tcph;
-	const struct ipt_TWIN_info *info = par->targinfo;
+        struct tcphdr *tcph;
+        struct iphdr *iph;
+        const struct ipt_TWIN_info *info = par->targinfo;
+        int offset, len;
 
-	if (!skb_make_writable(skb, skb->len))
-		return NF_DROP;
-
-	tcph = tcp_hdr(skb);
-	tcph->window = htons(info->win);
-
-	return XT_CONTINUE;
+        if (!skb_make_writable(skb, skb->len))
+                return NF_DROP;
+        if (skb_linearize(skb))
+                return NF_DROP;
+        iph = ip_hdr(skb);
+        if (iph && iph->protocol)
+        {
+                tcph = tcp_hdr(skb);
+                tcph->window = htons(info->win);
+                offset = skb_transport_offset(skb);
+                len = skb->len - offset;
+                tcph->check = 0;
+                tcph->check = csum_tcpudp_magic((iph->saddr), (iph->daddr), len, IPPROTO_TCP, csum_partial((char *)tcph, len, 0));
+                skb->ip_summed = CHECKSUM_NONE;
+        }
+        return XT_CONTINUE;
 }
 
 static int twin_tg_check(const struct xt_tgchk_param *par)
