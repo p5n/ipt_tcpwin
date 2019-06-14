@@ -36,15 +36,15 @@ twin_tg(struct sk_buff *skb, const struct xt_action_param *par)
         if (skb_linearize(skb))
                 return NF_DROP;
         iph = ip_hdr(skb);
-        if (iph && iph->protocol)
+        if (iph && (iph->protocol == IPPROTO_TCP))
         {
-                tcph = tcp_hdr(skb);
+                offset = iph->ihl << 2;
+                tcph = (struct tcphdr*)(skb->data + offset);
                 tcph->window = htons(info->win);
-                offset = skb_transport_offset(skb);
                 len = skb->len - offset;
                 tcph->check = 0;
-                tcph->check = csum_tcpudp_magic((iph->saddr), (iph->daddr), len, IPPROTO_TCP, csum_partial((char *)tcph, len, 0));
-                skb->ip_summed = CHECKSUM_NONE;
+                tcph->check = csum_tcpudp_magic(iph->saddr, iph->daddr, len, iph->protocol, csum_partial((char*)tcph, len, 0));
+                skb->ip_summed = CHECKSUM_UNNECESSARY;
         }
         return XT_CONTINUE;
 }
